@@ -18,15 +18,25 @@ jobs:
       url: ${{ steps.d.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack amt-upload.zip
+      - name: Unpack amt-upload.zip and patch.b64
         run: |
+          git pull -q origin main || true
+          ch=0
           if [ -f amt-upload.zip ]; then
             unzip -o -q amt-upload.zip -d .
             git rm -q amt-upload.zip
+            ch=1
+          fi
+          if [ -f patch.b64 ]; then
+            while IFS= read -r p && IFS= read -r b; do mkdir -p "$(dirname "$p")"; printf '%s' "$b" | base64 -d > "$p"; done < patch.b64
+            git rm -q patch.b64
+            ch=1
+          fi
+          if [ $ch = 1 ]; then
             git config user.name "github-actions"
             git config user.email "github-actions@users.noreply.github.com"
             git add -A
-            git commit -q -m "Unpack amt-upload.zip"
+            git commit -q -m "Unpack uploads"
             git push
           fi
       - uses: actions/configure-pages@v5
